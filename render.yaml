@@ -1,0 +1,38 @@
+# Render Blueprint for the GridWise service.
+#
+# Deploy:
+#   1. Push this repo to GitHub.
+#   2. Render Dashboard -> New + -> Blueprint -> select the repo.
+#      (or) render blueprint launch   # with the Render CLI
+#   3. Set the LLM_* env vars in the dashboard (Values tab) or via
+#      `render env set LLM_PROVIDER=anthropic LLM_API_KEY=<key>` -- never commit them.
+#   4. Render builds the Dockerfile and exposes the service on its default URL,
+#      e.g. https://gridwise-api.onrender.com
+#
+# Notes:
+#   - The Dockerfile path is auto-detected; the service binds 0.0.0.0:$PORT
+#     (Render injects PORT and our Dockerfile CMD honors it).
+#   - Health check path is /health; Render treats it as ready only on 200.
+#   - The free tier sleeps after inactivity; for judging, run a paid/always-on
+#     instance so the endpoint stays reachable for the whole evaluation window.
+
+services:
+  - type: web
+    name: gridwise-api
+    runtime: docker
+    plan: starter          # always-on; free tier sleeps and would fail p95 checks
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: LLM_PROVIDER
+        sync: false        # set in dashboard/CLI: mock | anthropic | openai
+      - key: LLM_MODEL
+        sync: false
+      - key: LLM_API_KEY
+        sync: false        # secret -- set in dashboard/CLI only
+      - key: LLM_TIMEOUT_SECONDS
+        value: "8"
+      - key: LLM_TRANSPORT_RETRIES
+        value: "1"
+      - key: PORT
+        value: "8000"

@@ -1,0 +1,38 @@
+# Fly.io v2 (Machines) configuration for the GridWise service.
+#
+# Deploy:
+#   flyctl launch --no-deploy          # first time: creates the app, keeps this file
+#   flyctl secrets set LLM_PROVIDER=anthropic LLM_MODEL=claude-sonnet-4-5 LLM_API_KEY=<key>
+#   flyctl deploy
+#   flyctl status && flyctl logs
+#
+# Secrets are injected at runtime by Fly — never baked into the image.
+
+app = "gridwise"            # flyctl launch sets the real app name; keep in sync
+primary_region = "fra"      # pick the region closest to you at launch time
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  LLM_PROVIDER = "mock"     # override with `flyctl secrets set LLM_PROVIDER=...`
+  PORT = "8000"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = false   # keep reachable through the whole judging window
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+  [http_service.checks]
+    [http_service.checks.health]
+      type = "tcp"
+      grace_period = "10s"
+      interval = "30s"
+      timeout = "5s"

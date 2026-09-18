@@ -1,0 +1,443 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gridwise.local/schemas/request-v1.json",
+  "title": "GridWise POST /optimize-energy request contract",
+  "description": "Strict machine-checkable request schema per Problem Statement Sections 07 and 10. Closed objects everywhere (additionalProperties: false). Cross-field rules that JSON Schema cannot express (24 unique hours 0-23 present exactly once; initial/minimum energy within capacity) are enforced by the service ingress (Pydantic) and proven equivalent by conformance tests.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scenario_id",
+    "operator_notes",
+    "hours",
+    "battery"
+  ],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "operator_notes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "hours": {
+      "type": "array",
+      "minItems": 24,
+      "maxItems": 24,
+      "items": {
+        "$ref": "#/$defs/hourInput"
+      },
+      "allOf": [
+        {
+          "description": "Pigeonhole: 24 entries, each hour value in 0-23, and every hour value must appear at least once -> each appears exactly once (hours may arrive in any order; the service normalizes order).",
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 0
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 0 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 1
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 1 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 2
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 2 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 3
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 3 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 4
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 4 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 5
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 5 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 6
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 6 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 7
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 7 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 8
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 8 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 9
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 9 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 10
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 10 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 11
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 11 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 12
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 12 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 13
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 13 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 14
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 14 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 15
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 15 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 16
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 16 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 17
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 17 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 18
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 18 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 19
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 19 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 20
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 20 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 21
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 21 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 22
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 22 must appear at least once (pigeonhole: exactly once)"
+          }
+        },
+        {
+          "contains": {
+            "type": "object",
+            "properties": {
+              "hour": {
+                "const": 23
+              }
+            },
+            "required": [
+              "hour"
+            ],
+            "description": "hour 23 must appear at least once (pigeonhole: exactly once)"
+          }
+        }
+      ]
+    },
+    "battery": {
+      "$ref": "#/$defs/batteryInput"
+    }
+  },
+  "$defs": {
+    "hourInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hour",
+        "demand_kwh",
+        "solar_kwh",
+        "tariff_bdt_per_kwh"
+      ],
+      "properties": {
+        "hour": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 23
+        },
+        "demand_kwh": {
+          "type": "number",
+          "minimum": 0
+        },
+        "solar_kwh": {
+          "type": "number",
+          "minimum": 0
+        },
+        "tariff_bdt_per_kwh": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "batteryInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capacity_kwh",
+        "initial_energy_kwh",
+        "minimum_energy_kwh",
+        "max_charge_kwh_per_hour",
+        "max_discharge_kwh_per_hour"
+      ],
+      "properties": {
+        "capacity_kwh": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "initial_energy_kwh": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minimum_energy_kwh": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_charge_kwh_per_hour": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_discharge_kwh_per_hour": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

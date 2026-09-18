@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://gridwise.local/schemas/response-v1.json",
+  "title": "GridWise POST /optimize-energy response contract",
+  "description": "Strict machine-checkable response schema per Problem Statement Sections 08 and 10. Used to validate responses as an unknown team's submission would be judged.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scenario_id",
+    "directive_interpretation",
+    "hourly_plan",
+    "total_grid_kwh",
+    "total_cost_bdt",
+    "peak_grid_kwh",
+    "plan_summary"
+  ],
+  "properties": {
+    "scenario_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "directive_interpretation": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": { "$ref": "#/$defs/directiveInterpretation" }
+    },
+    "hourly_plan": {
+      "type": "array",
+      "minItems": 24,
+      "maxItems": 24,
+      "items": { "$ref": "#/$defs/hourlyPlanEntry" }
+    },
+    "total_grid_kwh": { "type": "number", "minimum": 0 },
+    "total_cost_bdt": { "type": "number", "minimum": 0 },
+    "peak_grid_kwh": { "type": "number", "minimum": 0 },
+    "plan_summary": { "type": "string", "minLength": 1 }
+  },
+  "$defs": {
+    "hoursArray": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 24,
+      "items": { "type": "integer", "minimum": 0, "maximum": 23 },
+      "uniqueItems": true
+    },
+    "directiveInterpretation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "note_index",
+        "applies",
+        "directive_type",
+        "structured_adjustment",
+        "explanation"
+      ],
+      "properties": {
+        "note_index": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "applies": { "type": "boolean" },
+        "directive_type": {
+          "type": "string",
+          "enum": [
+            "solar_reduction",
+            "minimum_battery_reserve",
+            "no_charge_window",
+            "no_discharge_window",
+            "max_grid_window",
+            "no_op"
+          ]
+        },
+        "structured_adjustment": {
+          "anyOf": [
+            { "$ref": "#/$defs/solarReduction" },
+            { "$ref": "#/$defs/minimumBatteryReserve" },
+            { "$ref": "#/$defs/hoursOnly" },
+            { "$ref": "#/$defs/maxGridWindow" },
+            { "type": "null" }
+          ]
+        },
+        "explanation": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "directive_type": { "const": "no_op" } } },
+          "then": {
+            "properties": { "applies": { "const": false }, "structured_adjustment": { "type": "null" } }
+          }
+        },
+        {
+          "if": { "properties": { "directive_type": { "enum": ["solar_reduction", "minimum_battery_reserve", "no_charge_window", "no_discharge_window", "max_grid_window"] } } },
+          "then": { "properties": { "applies": { "const": true } } }
+        }
+      ]
+    },
+    "solarReduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hours", "factor"],
+      "properties": {
+        "hours": { "$ref": "#/$defs/hoursArray" },
+        "factor": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "minimumBatteryReserve": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hours", "minimum_energy_kwh"],
+      "properties": {
+        "hours": { "$ref": "#/$defs/hoursArray" },
+        "minimum_energy_kwh": { "type": "number", "minimum": 0 }
+      }
+    },
+    "hoursOnly": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hours"],
+      "properties": {
+        "hours": { "$ref": "#/$defs/hoursArray" }
+      }
+    },
+    "maxGridWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hours", "max_grid_kwh"],
+      "properties": {
+        "hours": { "$ref": "#/$defs/hoursArray" },
+        "max_grid_kwh": { "type": "number", "minimum": 0 }
+      }
+    },
+    "hourlyPlanEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hour",
+        "grid_kwh",
+        "solar_used_kwh",
+        "battery_action",
+        "battery_kwh",
+        "battery_energy_after_kwh"
+      ],
+      "properties": {
+        "hour": { "type": "integer", "minimum": 0, "maximum": 23 },
+        "grid_kwh": { "type": "number", "minimum": 0 },
+        "solar_used_kwh": { "type": "number", "minimum": 0 },
+        "battery_action": {
+          "type": "string",
+          "enum": ["charge", "discharge", "idle"]
+        },
+        "battery_kwh": { "type": "number", "minimum": 0 },
+        "battery_energy_after_kwh": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}
