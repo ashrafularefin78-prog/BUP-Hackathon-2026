@@ -24,6 +24,7 @@ RUN useradd --create-home --shell /usr/sbin/nologin appuser
 
 COPY --from=builder /opt/venv /opt/venv
 COPY app /opt/app/app
+COPY index.html /opt/app/index.html
 
 WORKDIR /opt/app
 ENV PATH="/opt/venv/bin:$PATH"

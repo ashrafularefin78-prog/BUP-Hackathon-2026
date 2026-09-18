@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="GridWise — LLM-assisted smart-campus energy optimization. Natural-language operator notes become provably valid, minimum-cost 24-hour energy schedules.">
+<meta property="og:title" content="GridWise — Smart-Campus Energy Optimization">
+<meta property="og:description" content="LLM-assisted operator-note interpretation, deterministic guardrails, LP optimization, and independent replay validation.">
+<title>GridWise — Smart-Campus Energy Optimization</title>
+<style>
+  :root {
+    --bg: #070c16;
+    --panel: #0d1526;
+    --panel-2: #131e35;
+    --border: #1f2c49;
+    --border-2: #2c3d63;
+    --text: #e8eef9;
+    --muted: #93a3c0;
+    --faint: #5f7093;
+    --accent: #4da3ff;
+    --accent-2: #57e0a9;
+    --warn: #f5b04d;
+    --danger: #ff6b7a;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(77,163,255,.13), transparent 60%),
+      radial-gradient(900px 500px at -10% 5%, rgba(87,224,169,.09), transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font: 15.5px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 22px; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code { font-family: var(--mono); font-size: .92em; }
+  h2 { font-size: 24px; margin: 0 0 6px; letter-spacing: -.2px; }
+  h3 { font-size: 15px; margin: 0 0 8px; }
+  .muted { color: var(--muted); }
+  .mono { font-family: var(--mono); }
+
+  /* ================= header / nav ================= */
+  .site-head {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(7,12,22,.82);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .site-head .wrap { display: flex; align-items: center; justify-content: space-between; height: 62px; }
+  .logo { display: flex; align-items: center; gap: 11px; color: var(--text); }
+  .logo:hover { text-decoration: none; }
+  .logo-mark {
+    width: 34px; height: 34px; border-radius: 9px; flex: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    display: grid; place-items: center; color: #06101f; font-weight: 800; font-size: 16px;
+  }
+  .logo b { font-size: 16.5px; letter-spacing: .2px; }
+  nav ul { display: flex; gap: 4px; list-style: none; margin: 0; padding: 0; }
+  nav a {
+    color: var(--muted); font-size: 14px; padding: 8px 12px; border-radius: 8px; display: block;
+  }
+  nav a:hover { color: var(--text); background: rgba(255,255,255,.05); text-decoration: none; }
+  .nav-actions { display: flex; align-items: center; gap: 10px; }
+  .health {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-size: 12.5px; color: var(--muted);
+    border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px;
+    background: rgba(255,255,255,.02);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; transition: background .2s; }
+  .dot.ok { background: var(--accent-2); box-shadow: 0 0 8px rgba(87,224,169,.75); }
+  .dot.err { background: var(--danger); }
+  @media (max-width: 840px) { nav { display: none; } }
+
+  /* ================= buttons ================= */
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--accent), #3b82d9);
+    color: #fff; border: 0; border-radius: 9px;
+    padding: 10px 20px; font: 600 14.5px/1.4 inherit-family, system-ui, sans-serif;
+    cursor: pointer; transition: filter .15s, transform .05s;
+  }
+  .btn:hover { filter: brightness(1.1); text-decoration: none; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .55; cursor: wait; }
+  .btn-ghost {
+    background: transparent; border: 1px solid var(--border-2); color: var(--text);
+    font-weight: 500;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,.05); }
+
+  /* ================= hero ================= */
+  .hero { padding: 76px 0 64px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12.5px; color: var(--accent-2); letter-spacing: 1.2px; text-transform: uppercase;
+    border: 1px solid rgba(87,224,169,.35); background: rgba(87,224,169,.07);
+    border-radius: 999px; padding: 6px 14px; margin: 0 0 22px;
+  }
+  .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); }
+  .hero h1 {
+    font-size: clamp(30px, 4.6vw, 46px); line-height: 1.14; margin: 0 0 18px;
+    letter-spacing: -.6px; max-width: 760px;
+  }
+  .hero h1 .grad {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .hero .lede { font-size: 17px; color: var(--muted); max-width: 640px; margin: 0 0 30px; }
+  .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;
+    margin-top: 44px; max-width: 780px;
+  }
+  .stat {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px;
+  }
+  .stat b { display: block; font-size: 21px; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; }
+
+  /* ================= sections ================= */
+  section { padding: 58px 0; border-top: 1px solid var(--border); }
+  section .sec-head { max-width: 720px; margin-bottom: 30px; }
+  .sec-kicker {
+    font-size: 12px; color: var(--accent); text-transform: uppercase; letter-spacing: 1.4px;
+    margin: 0 0 8px; font-weight: 600;
+  }
+  section p.sec-lede { color: var(--muted); margin: 0; }
+
+  /* pipeline */
+  .pipeline { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .stage {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px; position: relative;
+  }
+  .stage .num {
+    font-family: var(--mono); font-size: 11px; color: var(--accent);
+    border: 1px solid rgba(77,163,255,.35); border-radius: 6px; padding: 2px 7px; display: inline-block; margin-bottom: 10px;
+  }
+  .stage h3 { font-size: 14.5px; }
+  .stage p { font-size: 13px; color: var(--muted); margin: 0; }
+
+  /* safety grid */
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+  }
+  .card p { color: var(--muted); font-size: 13.5px; margin: 0; }
+  .card h3 { display: flex; align-items: center; gap: 8px; font-size: 14.5px; }
+  .tick {
+    width: 20px; height: 20px; border-radius: 6px; flex: none; display: grid; place-items: center;
+    background: rgba(87,224,169,.14); color: var(--accent-2); font-size: 11px; font-weight: 800;
+  }
+  .shield { background: rgba(77,163,255,.14); color: var(--accent); }
+
+  /* ================= demo ================= */
+  .demo-panel { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+  .demo-top { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  select, textarea {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border); border-radius: 9px; font: inherit;
+  }
+  select { padding: 9px 12px; min-width: 300px; }
+  textarea {
+    width: 100%; min-height: 200px; padding: 13px;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.5; resize: vertical;
+    display: none; white-space: pre; overflow-x: auto;
+  }
+  textarea.visible { display: block; }
+  .ref-note { font-size: 12.5px; color: var(--muted); }
+  .ref-note code { color: var(--accent-2); }
+  #status { margin: 12px 0 0; font-size: 13.5px; display: none; }
+  #status.visible { display: block; }
+  #status.err { color: var(--danger); }
+  #status.ok { color: var(--muted); }
+
+  #results { display: none; margin-top: 20px; }
+  #results.visible { display: block; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .kpi { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 17px; }
+  .kpi .label { color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .7px; }
+  .kpi .value { font-size: 24px; font-weight: 700; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .kpi .unit { font-size: 12.5px; color: var(--muted); font-weight: 400; }
+  .kpi .match {
+    margin-top: 6px; font-size: 11px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+  }
+  .kpi .match.ok { color: var(--accent-2); }
+  .kpi .match.diff { color: var(--warn); }
+
+  .subpanel { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 14px; }
+  .subpanel > h3 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted);
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+  }
+  .directives { display: grid; gap: 9px; margin-top: 10px; }
+  .directive { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; font-size: 13.5px; }
+  .directive .quote { color: var(--faint); font-style: italic; margin: 4px 0 8px; font-size: 12.5px; }
+  .directive .head { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; }
+  .badge {
+    font-size: 10.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+    border-radius: 999px; padding: 3px 10px;
+  }
+  .badge.applies { background: rgba(87,224,169,.14); color: var(--accent-2); }
+  .badge.demoted { background: rgba(245,176,77,.14); color: var(--warn); }
+  .badge.type { background: rgba(77,163,255,.14); color: var(--accent); }
+  .badge.idx { background: rgba(147,163,192,.12); color: var(--muted); }
+  .explanation { color: var(--muted); margin-top: 8px; }
+  .adjustment { margin-top: 8px; }
+  .adjustment summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+  .adjustment pre {
+    margin: 8px 0 0; background: #0a1120; border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; font-size: 12px; font-family: var(--mono); overflow-x: auto;
+  }
+
+  .tablewrap { overflow-x: auto; margin-top: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+  th:first-child, td:first-child { text-align: left; }
+  tr:last-child td { border-bottom: 0; }
+  .action { font-size: 10.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; text-transform: uppercase; letter-spacing: .4px; }
+  .action.charge { background: rgba(77,163,255,.15); color: var(--accent); }
+  .action.discharge { background: rgba(245,176,77,.15); color: var(--warn); }
+  .action.idle { background: rgba(147,163,192,.14); color: var(--muted); }
+
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin: 10px 0 8px; }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .swatch.grid { background: var(--accent); }
+  .swatch.solar { background: var(--accent-2); }
+  .bars { display: flex; align-items: flex-end; gap: 3px; height: 110px; }
+  .barcol { flex: 1; display: flex; align-items: flex-end; height: 100%; position: relative; }
+  .barcol > div { width: 100%; border-radius: 2px 2px 0 0; }
+  .barcol .grid-bar { background: var(--accent); }
+  .barcol .solar-bar { background: var(--accent-2); opacity: .85; margin-bottom: -1px; }
+  .barcol:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    background: #0a1120; border: 1px solid var(--border); color: var(--text);
+    font-size: 11px; font-family: var(--mono); white-space: nowrap;
+    padding: 4px 8px; border-radius: 6px; pointer-events: none; z-index: 2;
+  }
+  .axis { display: flex; gap: 3px; margin-top: 4px; }
+  .axis span { flex: 1; text-align: center; font-size: 10px; color: var(--faint); font-family: var(--mono); }
+
+  /* ================= api / footer ================= */
+  .api-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 760px) { .api-cols { grid-template-columns: 1fr; } }
+  .endpoint { display: flex; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px dashed var(--border); }
+  .endpoint:last-child { border-bottom: 0; }
+  .method {
+    font-family: var(--mono); font-size: 11px; font-weight: 700; border-radius: 6px; padding: 2px 8px; flex: none;
+  }
+  .method.get { background: rgba(87,224,169,.15); color: var(--accent-2); }
+  .method.post { background: rgba(77,163,255,.15); color: var(--accent); }
+  .endpoint code { color: var(--text); font-size: 13px; }
+  .endpoint span { color: var(--muted); font-size: 12.5px; }
+  pre.snippet {
+    background: #0a1120; border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 16px; font-size: 12px; line-height: 1.6; overflow-x: auto; margin: 0;
+    font-family: var(--mono); color: #c7d4ec;
+  }
+  .site-foot { border-top: 1px solid var(--border); padding: 34px 0 46px; color: var(--muted); font-size: 13px; }
+  .site-foot .cols { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap">
+    <a class="logo" href="#top">
+      <span class="logo-mark">G</span><b>GridWise</b>
+    </a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="#pipeline">Pipeline</a></li>
+        <li><a href="#safety">Safety</a></li>
+        <li><a href="#demo">Demo</a></li>
+        <li><a href="#api">API</a></li>
+        <li><a href="#quality">Quality</a></li>
+      </ul>
+    </nav>
+    <div class="nav-actions">
+      <span class="health"><span class="dot" id="health-dot"></span><span id="health-text">Checking…</span></span>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+
+  <!-- ============ hero ============ -->
+  <div class="wrap hero">
+    <p class="eyebrow">BUP CSE Fest 2026 · Online Preliminary</p>
+    <h1>Operator notes in.<br><span class="grad">Provably valid, minimum-cost schedules</span> out.</h1>
+    <p class="lede">
+      GridWise interprets natural-language campus operator notes with an LLM, validates the interpretation with
+      deterministic guardrails, compiles the directives into a linear program, and returns a 24-hour energy
+      schedule that an independent replay validator re-checks before it ever leaves the service.
+    </p>
+    <div class="hero-cta">
+      <a class="btn" href="#demo">Try the live demo</a>
+      <a class="btn btn-ghost" href="#api">View the API</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><b>165</b><span>tests passing</span></div>
+      <div class="stat"><b>50/50</b><span>adversarial notes</span></div>
+      <div class="stat"><b>~32&nbsp;ms</b><span>p95 latency</span></div>
+      <div class="stat"><b>10/10</b><span>public samples</span></div>
+    </div>
+  </div>
+
+  <!-- ============ pipeline ============ -->
+  <section id="pipeline">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="sec-kicker">How it works</p>
+        <h2>One request, five guarded stages</h2>
+        <p class="sec-lede">
+          Every stage is deterministic except the first — and the first is treated as untrusted input.
+          Nothing reaches the response that the replay validator has not re-simulated from scratch.
+        </p>
+      </div>
+      <div class="pipeline">
+        <div class="stage">
+          <span class="num">01 · schema</span>
+          <h3>Pydantic schema guard</h3>
+          <p>Malformed or structurally invalid requests are rejected with 400 before any LLM call.</p>
+        </div>
+        <div class="stage">
+          <span class="num">02 · LLM</span>
+          <h3>LLM interpreter</h3>
+          <p>One batched structured-output call turns each operator note into a machine-checkable directive.</p>
+        </div>
+        <div class="stage">
+          <span class="num">03 · guardrails</span>
+          <h3>Guardrail validator</h3>
+          <p>Pure-Python checks; near-misses salvaged conservatively, everything else demoted to a safe <code>no_op</code>.</p>
+        </div>
+        <div class="stage">
+          <span class="num">04 · LP</span>
+          <h3>LP optimizer (HiGHS)</h3>
+          <p>Continuous LP over 5 variables × 24 hours — energy balance, battery limits, directives, end-of-day neutrality.</p>
+        </div>
+        <div class="stage">
+          <span class="num">05 · replay</span>
+          <h3>Replay validator</h3>
+          <p>Independent judge-mirror re-simulation; totals are recomputed from <code>hourly_plan</code>, never trusted.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ safety ============ -->
+  <section id="safety">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="sec-kicker">Untrusted by design</p>
+        <h2>The LLM proposes; guardrails dispose</h2>
+        <p class="sec-lede">
+          The language model is the only source of directives and is never trusted. Its output is data,
+          not logic — malformed suggestions can never crash the service or invent a constraint.
+        </p>
+      </div>
+      <div class="grid-3">
+        <div class="card"><h3><span class="tick">✓</span>Salvage, don't discard</h3><p>Numeric strings coerced, unsorted hours re-sorted, index forced positional — near-misses are repaired deterministically before rejection is considered.</p></div>
+        <div class="card"><h3><span class="tick">✓</span>Safe demotion</h3><p>Anything that fails validation becomes a <code>no_op</code> with an explanation. The schedule stays valid; nothing is invented.</p></div>
+        <div class="card"><h3><span class="tick">✓</span>Provider-outage proof</h3><p>Bounded retries with backoff; on sustained failure the request short-circuits to safe interpretations and still returns a valid schedule.</p></div>
+        <div class="card"><h3><span class="shield">§</span>Closed directive taxonomy</h3><p>Six directive types, exact adjustment shapes, hours unique/ascending/0–23, factor ∈ [0,1], non-negative finite numerics.</p></div>
+        <div class="card"><h3><span class="shield">§</span>Independent replay</h3><p>A separate judge-mirror module re-simulates the returned plan at 0.01 tolerance and blocks the response on any rule failure.</p></div>
+        <div class="card"><h3><span class="shield">§</span>No secret leakage</h3><p>Errors are generic and controlled — no stack traces, no config, no provider details in any response body.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ demo ============ -->
+  <section id="demo">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="sec-kicker">Live demo</p>
+        <h2>Run a scenario against the real pipeline</h2>
+        <p class="sec-lede">
+          The ten public sample cases are embedded on this page. Each run executes the full path —
+          interpretation, guardrails, LP optimization, replay validation — and shows the response exactly as the judge sees it.
+        </p>
+      </div>
+
+      <div class="demo-panel">
+        <div class="demo-top">
+          <select id="scenario-select" aria-label="Scenario"></select>
+          <button id="run-btn" class="btn">Optimize</button>
+          <span class="ref-note" id="ref-note"></span>
+        </div>
+        <textarea id="custom-json" spellcheck="false"
+          placeholder="Custom request JSON (scenario_id, operator_notes, hours, battery)"></textarea>
+        <div id="status" role="alert"></div>
+
+        <div id="results">
+          <div class="kpis">
+            <div class="kpi">
+              <div class="label">Total cost</div>
+              <div class="value"><span id="kpi-cost">—</span> <span class="unit">BDT</span></div>
+              <div class="match" id="kpi-match"></div>
+            </div>
+            <div class="kpi"><div class="label">Grid import</div><div class="value"><span id="kpi-grid">—</span> <span class="unit">kWh</span></div></div>
+            <div class="kpi"><div class="label">Peak grid</div><div class="value"><span id="kpi-peak">—</span> <span class="unit">kWh</span></div></div>
+            <div class="kpi"><div class="label">Latency</div><div class="value"><span id="kpi-ms">—</span> <span class="unit">ms</span></div></div>
+            <div class="kpi"><div class="label">Scenario</div><div class="value" id="kpi-scenario" style="font-size:17px">—</div></div>
+          </div>
+
+          <div class="subpanel">
+            <h3>Directive interpretation</h3>
+            <div class="directives" id="directives"></div>
+          </div>
+
+          <div class="subpanel">
+            <h3>24-hour dispatch</h3>
+            <div class="legend">
+              <span><span class="swatch grid"></span> grid</span>
+              <span><span class="swatch solar"></span> solar</span>
+            </div>
+            <div class="bars" id="bars"></div>
+            <div class="axis" id="axis"></div>
+          </div>
+
+          <div class="subpanel">
+            <h3>Hourly plan</h3>
+            <div class="tablewrap">
+              <table>
+                <thead>
+                  <tr><th>Hour</th><th>Grid kWh</th><th>Solar kWh</th><th>Battery</th><th>Flow kWh</th><th>SoC after kWh</th></tr>
+                </thead>
+                <tbody id="plan-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="subpanel">
+            <h3>Plan summary</h3>
+            <div id="plan-summary" class="muted" style="font-size:13.5px"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ api ============ -->
+  <section id="api">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="sec-kicker">HTTP API</p>
+        <h2>Two endpoints, strict contracts</h2>
+        <p class="sec-lede">Request and response shapes are pinned by JSON Schema (Draft 2020-12, closed objects) with negative controls proving the schemas reject broken responses.</p>
+      </div>
+      <div class="api-cols">
+        <div>
+          <div class="endpoint"><span class="method get">GET</span><div><code>/health</code><br><span>Readiness probe — <code>{"status":"ok"}</code></span></div></div>
+          <div class="endpoint"><span class="method post">POST</span><div><code>/optimize-energy</code><br><span>Interpret notes + return the 24-hour plan and totals</span></div></div>
+          <div class="endpoint"><span class="method get">GET</span><div><code>/docs</code><br><span>OpenAPI UI · schema at <code>/openapi.json</code></span></div></div>
+        </div>
+        <pre class="snippet">curl -s -X POST http://127.0.0.1:8000/optimize-energy \
+  -H "Content-Type: application/json" \
+  -d @sample-01.json | jq '.total_cost_bdt, .peak_grid_kwh'
+
+# 38365
+# 175</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ quality ============ -->
+  <section id="quality">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="sec-kicker">Quality gates</p>
+        <h2>Judge-side acceptance, not just unit tests</h2>
+        <p class="sec-lede">Every response is validated against a strict JSON Schema and independently replayed against the organizer ground truth.</p>
+      </div>
+      <div class="grid-3">
+        <div class="card"><h3><span class="tick">✓</span>165 tests, ~3 s</h3><p>Every guardrail rejection path, LP unit tests with hand-verified optima, and all 10 public samples end-to-end.</p></div>
+        <div class="card"><h3><span class="tick">✓</span>Adversarial notes</h3><p>50 hidden-style paraphrases across all six directive types scored through the full interpretation path — usable as a release gate.</p></div>
+        <div class="card"><h3><span class="tick">✓</span>Negative schema controls</h3><p>Broken responses (extra fields, wrong shapes, out-of-range hours) are proven rejected, not merely untested.</p></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-foot">
+  <div class="wrap cols">
+    <div>
+      <b>GridWise</b> — BUP CSE Fest 2026 preliminary · built with FastAPI, Pydantic, SciPy (HiGHS), NumPy, httpx, uvicorn, pytest.<br>
+      <span class="muted">Operator notes are interpreted by the configured LLM provider; the plan is compiled and replay-validated server-side.</span>
+    </div>
+    <div>
+      <a href="/docs">OpenAPI docs</a> · <a href="/health">/health</a> · <a href="#demo">Demo</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+/* Embedded public sample cases (inputs + reference optima from
+   BUP_CSE_FEST_2026_Preli_Public_Sample_Cases.json).
+   Embedded rather than fetched so the page works identically inside the Docker
+   image, which does not ship the JSON pack. */
+var SAMPLES = [{"id":"SAMPLE-01","label":"Solar cleaning + distractor","input":{"scenario_id":"SAMPLE-01","operator_notes":["Facilities will wash the rooftop solar panels from noon until 2 PM. During cleaning, usable solar should be treated as roughly 25% of the forecast.","The sports office moved next month's registration deadline."],"hours":[{"hour":0,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":1,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":3,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":110,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":130,"solar_kwh":20,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":150,"solar_kwh":50,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":165,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":10,"demand_kwh":175,"solar_kwh":130,"tariff_bdt_per_kwh":16},{"hour":11,"demand_kwh":180,"solar_kwh":160,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":185,"solar_kwh":180,"tariff_bdt_per_kwh":15},{"hour":13,"demand_kwh":180,"solar_kwh":170,"tariff_bdt_per_kwh":14},{"hour":14,"demand_kwh":170,"solar_kwh":140,"tariff_bdt_per_kwh":13},{"hour":15,"demand_kwh":165,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":16,"demand_kwh":170,"solar_kwh":45,"tariff_bdt_per_kwh":18},{"hour":17,"demand_kwh":185,"solar_kwh":10,"tariff_bdt_per_kwh":22},{"hour":18,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":28},{"hour":19,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":30},{"hour":20,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":26},{"hour":21,"demand_kwh":175,"solar_kwh":0,"tariff_bdt_per_kwh":18},{"hour":22,"demand_kwh":135,"solar_kwh":0,"tariff_bdt_per_kwh":10},{"hour":23,"demand_kwh":105,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":220,"initial_energy_kwh":110,"minimum_energy_kwh":40,"max_charge_kwh_per_hour":50,"max_discharge_kwh_per_hour":50}}},{"id":"SAMPLE-02","label":"Battery charging maintenance","input":{"scenario_id":"SAMPLE-02","operator_notes":["The battery charger will be isolated from 2 AM until 5 AM for electrical maintenance."],"hours":[{"hour":0,"demand_kwh":100,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":1,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":2,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":4},{"hour":3,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":4},{"hour":4,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":4},{"hour":5,"demand_kwh":105,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":6,"demand_kwh":120,"solar_kwh":0,"tariff_bdt_per_kwh":7},{"hour":7,"demand_kwh":135,"solar_kwh":10,"tariff_bdt_per_kwh":9},{"hour":8,"demand_kwh":145,"solar_kwh":30,"tariff_bdt_per_kwh":11},{"hour":9,"demand_kwh":155,"solar_kwh":55,"tariff_bdt_per_kwh":13},{"hour":10,"demand_kwh":165,"solar_kwh":80,"tariff_bdt_per_kwh":15},{"hour":11,"demand_kwh":175,"solar_kwh":100,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":180,"solar_kwh":110,"tariff_bdt_per_kwh":16},{"hour":13,"demand_kwh":175,"solar_kwh":105,"tariff_bdt_per_kwh":15},{"hour":14,"demand_kwh":165,"solar_kwh":85,"tariff_bdt_per_kwh":14},{"hour":15,"demand_kwh":160,"solar_kwh":60,"tariff_bdt_per_kwh":15},{"hour":16,"demand_kwh":170,"solar_kwh":30,"tariff_bdt_per_kwh":19},{"hour":17,"demand_kwh":190,"solar_kwh":10,"tariff_bdt_per_kwh":24},{"hour":18,"demand_kwh":210,"solar_kwh":0,"tariff_bdt_per_kwh":31},{"hour":19,"demand_kwh":220,"solar_kwh":0,"tariff_bdt_per_kwh":33},{"hour":20,"demand_kwh":210,"solar_kwh":0,"tariff_bdt_per_kwh":29},{"hour":21,"demand_kwh":180,"solar_kwh":0,"tariff_bdt_per_kwh":20},{"hour":22,"demand_kwh":145,"solar_kwh":0,"tariff_bdt_per_kwh":11},{"hour":23,"demand_kwh":115,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":200,"initial_energy_kwh":70,"minimum_energy_kwh":30,"max_charge_kwh_per_hour":55,"max_discharge_kwh_per_hour":55}}},{"id":"SAMPLE-03","label":"Emergency reserve as percentage","input":{"scenario_id":"SAMPLE-03","operator_notes":["Keep at least 50% of the battery capacity stored in the battery from 6 PM until 9 PM for emergency operations."],"hours":[{"hour":0,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":1,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":3,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":110,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":130,"solar_kwh":20,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":150,"solar_kwh":50,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":165,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":10,"demand_kwh":175,"solar_kwh":130,"tariff_bdt_per_kwh":16},{"hour":11,"demand_kwh":180,"solar_kwh":160,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":185,"solar_kwh":180,"tariff_bdt_per_kwh":15},{"hour":13,"demand_kwh":180,"solar_kwh":170,"tariff_bdt_per_kwh":14},{"hour":14,"demand_kwh":170,"solar_kwh":140,"tariff_bdt_per_kwh":13},{"hour":15,"demand_kwh":165,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":16,"demand_kwh":170,"solar_kwh":45,"tariff_bdt_per_kwh":18},{"hour":17,"demand_kwh":185,"solar_kwh":10,"tariff_bdt_per_kwh":22},{"hour":18,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":28},{"hour":19,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":30},{"hour":20,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":26},{"hour":21,"demand_kwh":175,"solar_kwh":0,"tariff_bdt_per_kwh":18},{"hour":22,"demand_kwh":135,"solar_kwh":0,"tariff_bdt_per_kwh":10},{"hour":23,"demand_kwh":105,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":200,"initial_energy_kwh":120,"minimum_energy_kwh":40,"max_charge_kwh_per_hour":50,"max_discharge_kwh_per_hour":50}}},{"id":"SAMPLE-04","label":"No-discharge protection test","input":{"scenario_id":"SAMPLE-04","operator_notes":["For protection testing, the battery must not discharge from 6 PM until 8 PM."],"hours":[{"hour":0,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":7},{"hour":1,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":3,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":100,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":115,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":130,"solar_kwh":15,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":145,"solar_kwh":40,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":155,"solar_kwh":75,"tariff_bdt_per_kwh":14},{"hour":10,"demand_kwh":165,"solar_kwh":110,"tariff_bdt_per_kwh":16},{"hour":11,"demand_kwh":175,"solar_kwh":145,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":180,"solar_kwh":165,"tariff_bdt_per_kwh":15},{"hour":13,"demand_kwh":175,"solar_kwh":155,"tariff_bdt_per_kwh":14},{"hour":14,"demand_kwh":170,"solar_kwh":125,"tariff_bdt_per_kwh":13},{"hour":15,"demand_kwh":165,"solar_kwh":80,"tariff_bdt_per_kwh":14},{"hour":16,"demand_kwh":175,"solar_kwh":35,"tariff_bdt_per_kwh":17},{"hour":17,"demand_kwh":195,"solar_kwh":5,"tariff_bdt_per_kwh":21},{"hour":18,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":29},{"hour":19,"demand_kwh":225,"solar_kwh":0,"tariff_bdt_per_kwh":32},{"hour":20,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":30},{"hour":21,"demand_kwh":185,"solar_kwh":0,"tariff_bdt_per_kwh":20},{"hour":22,"demand_kwh":150,"solar_kwh":0,"tariff_bdt_per_kwh":11},{"hour":23,"demand_kwh":120,"solar_kwh":0,"tariff_bdt_per_kwh":8}],"battery":{"capacity_kwh":230,"initial_energy_kwh":130,"minimum_energy_kwh":40,"max_charge_kwh_per_hour":55,"max_discharge_kwh_per_hour":55}}},{"id":"SAMPLE-05","label":"Temporary feeder grid cap","input":{"scenario_id":"SAMPLE-05","operator_notes":["From 6 PM until 9 PM, campus grid import must not exceed 155 kWh in any hour because the feeder is operating under a temporary limit."],"hours":[{"hour":0,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":1,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":3,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":110,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":130,"solar_kwh":20,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":150,"solar_kwh":50,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":165,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":10,"demand_kwh":175,"solar_kwh":130,"tariff_bdt_per_kwh":16},{"hour":11,"demand_kwh":180,"solar_kwh":160,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":185,"solar_kwh":180,"tariff_bdt_per_kwh":15},{"hour":13,"demand_kwh":180,"solar_kwh":170,"tariff_bdt_per_kwh":14},{"hour":14,"demand_kwh":170,"solar_kwh":140,"tariff_bdt_per_kwh":13},{"hour":15,"demand_kwh":165,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":16,"demand_kwh":170,"solar_kwh":45,"tariff_bdt_per_kwh":18},{"hour":17,"demand_kwh":185,"solar_kwh":10,"tariff_bdt_per_kwh":22},{"hour":18,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":28},{"hour":19,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":30},{"hour":20,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":26},{"hour":21,"demand_kwh":175,"solar_kwh":0,"tariff_bdt_per_kwh":18},{"hour":22,"demand_kwh":135,"solar_kwh":0,"tariff_bdt_per_kwh":10},{"hour":23,"demand_kwh":105,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":240,"initial_energy_kwh":120,"minimum_energy_kwh":30,"max_charge_kwh_per_hour":60,"max_discharge_kwh_per_hour":60}}},{"id":"SAMPLE-06","label":"Multiple notes with distractor","input":{"scenario_id":"SAMPLE-06","operator_notes":["Cloud cover during panel inspection will leave about half of the forecast solar output from 10 AM until noon.","The charging circuit will be unavailable from 2 PM until 4 PM.","The library is extending book-return hours next week."],"hours":[{"hour":0,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":1,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":2,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":3,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":4,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":5,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":7},{"hour":6,"demand_kwh":110,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":125,"solar_kwh":20,"tariff_bdt_per_kwh":9},{"hour":8,"demand_kwh":140,"solar_kwh":55,"tariff_bdt_per_kwh":11},{"hour":9,"demand_kwh":155,"solar_kwh":100,"tariff_bdt_per_kwh":13},{"hour":10,"demand_kwh":165,"solar_kwh":150,"tariff_bdt_per_kwh":15},{"hour":11,"demand_kwh":175,"solar_kwh":190,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":180,"solar_kwh":210,"tariff_bdt_per_kwh":16},{"hour":13,"demand_kwh":175,"solar_kwh":200,"tariff_bdt_per_kwh":15},{"hour":14,"demand_kwh":170,"solar_kwh":160,"tariff_bdt_per_kwh":14},{"hour":15,"demand_kwh":165,"solar_kwh":100,"tariff_bdt_per_kwh":15},{"hour":16,"demand_kwh":175,"solar_kwh":50,"tariff_bdt_per_kwh":18},{"hour":17,"demand_kwh":190,"solar_kwh":15,"tariff_bdt_per_kwh":22},{"hour":18,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":27},{"hour":19,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":29},{"hour":20,"demand_kwh":205,"solar_kwh":0,"tariff_bdt_per_kwh":27},{"hour":21,"demand_kwh":175,"solar_kwh":0,"tariff_bdt_per_kwh":18},{"hour":22,"demand_kwh":140,"solar_kwh":0,"tariff_bdt_per_kwh":10},{"hour":23,"demand_kwh":110,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":220,"initial_energy_kwh":100,"minimum_energy_kwh":35,"max_charge_kwh_per_hour":50,"max_discharge_kwh_per_hour":50}}},{"id":"SAMPLE-07","label":"Reserve plus transformer cap","input":{"scenario_id":"SAMPLE-07","operator_notes":["Keep at least 90 kWh in the battery from 6 PM until 10 PM for emergency services.","The evening transformer limit is 180 kWh of grid import from 7 PM until 9 PM."],"hours":[{"hour":0,"demand_kwh":100,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":1,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":3,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":105,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":120,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":135,"solar_kwh":20,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":150,"solar_kwh":50,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":165,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":10,"demand_kwh":175,"solar_kwh":135,"tariff_bdt_per_kwh":15},{"hour":11,"demand_kwh":185,"solar_kwh":170,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":190,"solar_kwh":190,"tariff_bdt_per_kwh":16},{"hour":13,"demand_kwh":185,"solar_kwh":180,"tariff_bdt_per_kwh":15},{"hour":14,"demand_kwh":175,"solar_kwh":145,"tariff_bdt_per_kwh":14},{"hour":15,"demand_kwh":170,"solar_kwh":95,"tariff_bdt_per_kwh":15},{"hour":16,"demand_kwh":180,"solar_kwh":45,"tariff_bdt_per_kwh":18},{"hour":17,"demand_kwh":195,"solar_kwh":10,"tariff_bdt_per_kwh":23},{"hour":18,"demand_kwh":210,"solar_kwh":0,"tariff_bdt_per_kwh":29},{"hour":19,"demand_kwh":225,"solar_kwh":0,"tariff_bdt_per_kwh":32},{"hour":20,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":30},{"hour":21,"demand_kwh":185,"solar_kwh":0,"tariff_bdt_per_kwh":21},{"hour":22,"demand_kwh":145,"solar_kwh":0,"tariff_bdt_per_kwh":11},{"hour":23,"demand_kwh":115,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":250,"initial_energy_kwh":150,"minimum_energy_kwh":40,"max_charge_kwh_per_hour":60,"max_discharge_kwh_per_hour":60}}},{"id":"SAMPLE-08","label":"Separate charge/discharge outages","input":{"scenario_id":"SAMPLE-08","operator_notes":["Battery charging is disabled from 11 AM until 1 PM while technicians inspect the charger.","Do not discharge the battery from 5 PM until 7 PM during relay testing."],"hours":[{"hour":0,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":1,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":3,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":110,"solar_kwh":0,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":125,"solar_kwh":15,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":140,"solar_kwh":40,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":155,"solar_kwh":80,"tariff_bdt_per_kwh":14},{"hour":10,"demand_kwh":165,"solar_kwh":120,"tariff_bdt_per_kwh":15},{"hour":11,"demand_kwh":175,"solar_kwh":155,"tariff_bdt_per_kwh":16},{"hour":12,"demand_kwh":180,"solar_kwh":175,"tariff_bdt_per_kwh":15},{"hour":13,"demand_kwh":175,"solar_kwh":165,"tariff_bdt_per_kwh":14},{"hour":14,"demand_kwh":165,"solar_kwh":130,"tariff_bdt_per_kwh":13},{"hour":15,"demand_kwh":160,"solar_kwh":85,"tariff_bdt_per_kwh":14},{"hour":16,"demand_kwh":170,"solar_kwh":40,"tariff_bdt_per_kwh":18},{"hour":17,"demand_kwh":190,"solar_kwh":10,"tariff_bdt_per_kwh":24},{"hour":18,"demand_kwh":210,"solar_kwh":0,"tariff_bdt_per_kwh":30},{"hour":19,"demand_kwh":220,"solar_kwh":0,"tariff_bdt_per_kwh":31},{"hour":20,"demand_kwh":210,"solar_kwh":0,"tariff_bdt_per_kwh":28},{"hour":21,"demand_kwh":180,"solar_kwh":0,"tariff_bdt_per_kwh":19},{"hour":22,"demand_kwh":145,"solar_kwh":0,"tariff_bdt_per_kwh":10},{"hour":23,"demand_kwh":115,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":210,"initial_energy_kwh":105,"minimum_energy_kwh":35,"max_charge_kwh_per_hour":50,"max_discharge_kwh_per_hour":50}}},{"id":"SAMPLE-09","label":"Reduction wording normalization","input":{"scenario_id":"SAMPLE-09","operator_notes":["Expect an 80% reduction in rooftop solar between 11 AM and 2 PM because of inverter work.","The student affairs office will publish club notices tomorrow."],"hours":[{"hour":0,"demand_kwh":90,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":1,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":3,"demand_kwh":80,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":85,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":105,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":120,"solar_kwh":25,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":135,"solar_kwh":65,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":150,"solar_kwh":120,"tariff_bdt_per_kwh":13},{"hour":10,"demand_kwh":165,"solar_kwh":180,"tariff_bdt_per_kwh":14},{"hour":11,"demand_kwh":175,"solar_kwh":230,"tariff_bdt_per_kwh":15},{"hour":12,"demand_kwh":180,"solar_kwh":260,"tariff_bdt_per_kwh":15},{"hour":13,"demand_kwh":175,"solar_kwh":240,"tariff_bdt_per_kwh":14},{"hour":14,"demand_kwh":165,"solar_kwh":190,"tariff_bdt_per_kwh":13},{"hour":15,"demand_kwh":160,"solar_kwh":120,"tariff_bdt_per_kwh":14},{"hour":16,"demand_kwh":170,"solar_kwh":55,"tariff_bdt_per_kwh":18},{"hour":17,"demand_kwh":185,"solar_kwh":10,"tariff_bdt_per_kwh":22},{"hour":18,"demand_kwh":200,"solar_kwh":0,"tariff_bdt_per_kwh":27},{"hour":19,"demand_kwh":210,"solar_kwh":0,"tariff_bdt_per_kwh":29},{"hour":20,"demand_kwh":200,"solar_kwh":0,"tariff_bdt_per_kwh":26},{"hour":21,"demand_kwh":170,"solar_kwh":0,"tariff_bdt_per_kwh":18},{"hour":22,"demand_kwh":135,"solar_kwh":0,"tariff_bdt_per_kwh":10},{"hour":23,"demand_kwh":105,"solar_kwh":0,"tariff_bdt_per_kwh":7}],"battery":{"capacity_kwh":240,"initial_energy_kwh":120,"minimum_energy_kwh":40,"max_charge_kwh_per_hour":60,"max_discharge_kwh_per_hour":60}}},{"id":"SAMPLE-10","label":"Multi-constraint evening operation","input":{"scenario_id":"SAMPLE-10","operator_notes":["The data center requires at least 80 kWh to remain in the battery from 6 PM until 10 PM.","Grid intake must stay at or below 190 kWh from 7 PM until 10 PM while the substation is constrained.","A seminar room booking was moved to next week."],"hours":[{"hour":0,"demand_kwh":105,"solar_kwh":0,"tariff_bdt_per_kwh":7},{"hour":1,"demand_kwh":100,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":2,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":3,"demand_kwh":95,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":4,"demand_kwh":100,"solar_kwh":0,"tariff_bdt_per_kwh":5},{"hour":5,"demand_kwh":110,"solar_kwh":0,"tariff_bdt_per_kwh":6},{"hour":6,"demand_kwh":125,"solar_kwh":5,"tariff_bdt_per_kwh":8},{"hour":7,"demand_kwh":140,"solar_kwh":20,"tariff_bdt_per_kwh":10},{"hour":8,"demand_kwh":155,"solar_kwh":50,"tariff_bdt_per_kwh":12},{"hour":9,"demand_kwh":170,"solar_kwh":90,"tariff_bdt_per_kwh":14},{"hour":10,"demand_kwh":180,"solar_kwh":130,"tariff_bdt_per_kwh":16},{"hour":11,"demand_kwh":190,"solar_kwh":165,"tariff_bdt_per_kwh":17},{"hour":12,"demand_kwh":195,"solar_kwh":185,"tariff_bdt_per_kwh":16},{"hour":13,"demand_kwh":190,"solar_kwh":175,"tariff_bdt_per_kwh":15},{"hour":14,"demand_kwh":180,"solar_kwh":140,"tariff_bdt_per_kwh":14},{"hour":15,"demand_kwh":175,"solar_kwh":90,"tariff_bdt_per_kwh":15},{"hour":16,"demand_kwh":185,"solar_kwh":40,"tariff_bdt_per_kwh":19},{"hour":17,"demand_kwh":200,"solar_kwh":10,"tariff_bdt_per_kwh":24},{"hour":18,"demand_kwh":215,"solar_kwh":0,"tariff_bdt_per_kwh":30},{"hour":19,"demand_kwh":230,"solar_kwh":0,"tariff_bdt_per_kwh":34},{"hour":20,"demand_kwh":220,"solar_kwh":0,"tariff_bdt_per_kwh":31},{"hour":21,"demand_kwh":190,"solar_kwh":0,"tariff_bdt_per_kwh":21},{"hour":22,"demand_kwh":150,"solar_kwh":0,"tariff_bdt_per_kwh":11},{"hour":23,"demand_kwh":120,"solar_kwh":0,"tariff_bdt_per_kwh":8}],"battery":{"capacity_kwh":260,"initial_energy_kwh":140,"minimum_energy_kwh":40,"max_charge_kwh_per_hour":65,"max_discharge_kwh_per_hour":65}}}];
+
+var REFERENCES = {
+  "SAMPLE-01": { cost: 38365, grid: 2692.5, peak: 175 },
+  "SAMPLE-02": { cost: 42885, grid: 2915, peak: 180 },
+  "SAMPLE-03": { cost: 35480, grid: 2430, peak: 205 },
+  "SAMPLE-04": { cost: 40495, grid: 2645, peak: 225 },
+  "SAMPLE-05": { cost: 33950, grid: 2430, peak: 175 },
+  "SAMPLE-06": {"cost": 34090, "grid": 2395, "peak": 175},
+  "SAMPLE-07": { cost: 38550, grid: 2560, peak: 185 },
+  "SAMPLE-08": { cost: 37665, grid: 2490, peak: 210 },
+  "SAMPLE-09": { cost: 34873, grid: 2504, peak: 170 },
+  "SAMPLE-10": { cost: 41620, grid: 2715, peak: 190 }
+};
+
+var $ = function (id) { return document.getElementById(id); };
+var select = $("scenario-select");
+var customBox = $("custom-json");
+var runBtn = $("run-btn");
+var statusEl = $("status");
+var resultsEl = $("results");
+var refNote = $("ref-note");
+
+/* ---------- scenario picker ---------- */
+(function populate() {
+  var optCustom = document.createElement("option");
+  optCustom.value = "custom";
+  optCustom.textContent = "Custom JSON…";
+  select.appendChild(optCustom);
+  SAMPLES.forEach(function (s, i) {
+    var o = document.createElement("option");
+    o.value = String(i);
+    o.textContent = s.id + " — " + s.label;
+    select.appendChild(o);
+  });
+  select.value = "0";
+  syncCustom();
+  /* Pre-fill the custom box at load so it is never empty, even if a change
+     event is ever missed (defensive: self-heals stale custom mode). */
+  customBox.value = JSON.stringify(SAMPLES[0].input, null, 2);
+})();
+
+function syncCustom() {
+  var isCustom = select.value === "custom";
+  customBox.classList.toggle("visible", isCustom);
+  var i = Number(select.value);
+  if (!isCustom && SAMPLES[i]) {
+    refNote.innerHTML = "reference optimum: <code>" + REFERENCES[SAMPLES[i].id].cost.toLocaleString("en-US") +
+      " BDT</code> · <code>" + REFERENCES[SAMPLES[i].id].grid + " kWh</code> grid · peak <code>" +
+      REFERENCES[SAMPLES[i].id].peak + " kWh</code>";
+  } else {
+    refNote.textContent = "";
+  }
+}
+select.addEventListener("change", syncCustom);
+
+/* ---------- health badge ---------- */
+(function checkHealth() {
+  fetch("/health", { headers: { "Accept": "application/json" } })
+    .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(function (body) {
+      var ok = body && body.status === "ok";
+      $("health-dot").className = "dot " + (ok ? "ok" : "err");
+      $("health-text").textContent = ok ? "Service ready" : "Unexpected /health body";
+    })
+    .catch(function () {
+      $("health-dot").className = "dot err";
+      $("health-text").textContent = "Service unreachable";
+    });
+})();
+
+function setStatus(msg, cls) {
+  statusEl.textContent = msg;
+  statusEl.className = "visible" + (cls ? " " + cls : "");
+}
+function clearStatus() { statusEl.className = ""; statusEl.textContent = ""; }
+
+function fmt(n) {
+  if (typeof n !== "number" || !isFinite(n)) return "—";
+  return Number(n.toFixed(2)).toLocaleString("en-US");
+}
+
+/* ---------- run ---------- */
+runBtn.addEventListener("click", function () {
+  syncCustom(); /* self-heal visibility/prefill in case a change event was missed */
+  clearStatus();
+  resultsEl.classList.remove("visible");
+
+  var payload;
+  if (select.value === "custom") {
+    var raw = customBox.value;
+    if (!raw.trim()) { setStatus("Enter a request JSON payload first.", "err"); return; }
+    try {
+      payload = JSON.parse(raw);
+    } catch (e) {
+      setStatus("Invalid JSON: " + e.message, "err");
+      return;
+    }
+  } else {
+    payload = SAMPLES[Number(select.value)].input;
+  }
+
+  var t0 = performance.now();
+  runBtn.disabled = true;
+  runBtn.textContent = "Optimizing…";
+
+  fetch("/optimize-energy", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+    .then(function (r) {
+      return r.json().catch(function () { return null; }).then(function (body) {
+        return { ok: r.ok, status: r.status, body: body };
+      });
+    })
+    .then(function (res) {
+      var ms = Math.round(performance.now() - t0);
+      if (!res.ok) {
+        var detail = res.body && res.body.detail ? res.body.detail : "HTTP " + res.status;
+        setStatus("Request failed (" + res.status + "): " + detail + " — check the payload and retry.", "err");
+        return;
+      }
+      render(res.body, ms);
+    })
+    .catch(function () {
+      setStatus("Network error — is the service running? Retry in a moment.", "err");
+    })
+    .finally(function () {
+      runBtn.disabled = false;
+      runBtn.textContent = "Optimize";
+    });
+});
+
+/* ---------- render ---------- */
+function render(res, ms) {
+  var sample = select.value === "custom" ? null : SAMPLES[Number(select.value)];
+  var ref = sample ? REFERENCES[sample.id] : null;
+
+  $("kpi-cost").textContent = fmt(res.total_cost_bdt);
+  $("kpi-grid").textContent = fmt(res.total_grid_kwh);
+  $("kpi-peak").textContent = fmt(res.peak_grid_kwh);
+  $("kpi-ms").textContent = ms;
+  $("kpi-scenario").textContent = res.scenario_id;
+
+  var match = $("kpi-match");
+  if (ref) {
+    var delta = Math.abs(res.total_cost_bdt - ref.cost);
+    if (delta <= 0.01) {
+      match.className = "match ok";
+      match.textContent = "✓ matches reference optimum";
+    } else {
+      match.className = "match diff";
+      match.textContent = "⚠ " + Math.abs(delta).toFixed(2) + " BDT off reference";
+    }
+  } else {
+    match.className = "match";
+    match.textContent = "";
+  }
+
+  renderDirectives(res.directive_interpretation || [], sample ? sample.input.operator_notes : null);
+  renderPlan(res.hourly_plan || []);
+  $("plan-summary").textContent = res.plan_summary || "";
+
+  setStatus("Optimized in " + ms + " ms", "ok");
+  resultsEl.classList.add("visible");
+}
+
+function renderDirectives(dirs, notes) {
+  var host = $("directives");
+  host.textContent = "";
+  if (!dirs.length) {
+    host.textContent = "No directive entries returned.";
+    return;
+  }
+  dirs.forEach(function (d) {
+    var card = document.createElement("div");
+    card.className = "directive";
+
+    var head = document.createElement("div");
+    head.className = "head";
+
+    var idx = document.createElement("span");
+    idx.className = "badge idx";
+    idx.textContent = "note " + d.note_index;
+    head.appendChild(idx);
+
+    var badge = document.createElement("span");
+    badge.className = "badge " + (d.applies ? "applies" : "demoted");
+    badge.textContent = d.applies ? "applies" : "no_op";
+    head.appendChild(badge);
+
+    var type = document.createElement("span");
+    type.className = "badge type";
+    type.textContent = d.directive_type;
+    head.appendChild(type);
+    card.appendChild(head);
+
+    if (notes && notes[d.note_index]) {
+      var q = document.createElement("div");
+      q.className = "quote";
+      q.textContent = "“" + notes[d.note_index] + "”";
+      card.appendChild(q);
+    }
+
+    var expl = document.createElement("div");
+    expl.className = "explanation";
+    expl.textContent = d.explanation || "";
+    card.appendChild(expl);
+
+    if (d.structured_adjustment) {
+      var det = document.createElement("details");
+      det.className = "adjustment";
+      var sum = document.createElement("summary");
+      sum.textContent = "structured_adjustment";
+      det.appendChild(sum);
+      var pre = document.createElement("pre");
+      pre.textContent = JSON.stringify(d.structured_adjustment, null, 2);
+      det.appendChild(pre);
+      card.appendChild(det);
+    }
+    host.appendChild(card);
+  });
+}
+
+function renderPlan(plan) {
+  var body = $("plan-body");
+  body.textContent = "";
+  var bars = $("bars");
+  var axis = $("axis");
+  bars.textContent = "";
+  axis.textContent = "";
+
+  var maxKwh = 0;
+  plan.forEach(function (h) {
+    maxKwh = Math.max(maxKwh, h.grid_kwh + h.solar_used_kwh);
+  });
+  if (maxKwh <= 0) maxKwh = 1;
+
+  plan.forEach(function (h) {
+    var tr = document.createElement("tr");
+    [h.hour, h.grid_kwh, h.solar_used_kwh, null, h.battery_kwh, h.battery_energy_after_kwh]
+      .forEach(function (v, ci) {
+        var td = document.createElement("td");
+        if (ci === 3) {
+          var chip = document.createElement("span");
+          chip.className = "action " + h.battery_action;
+          chip.textContent = h.battery_action;
+          td.appendChild(chip);
+        } else {
+          td.textContent = fmt(v);
+        }
+        tr.appendChild(td);
+      });
+    body.appendChild(tr);
+
+    var col = document.createElement("div");
+    col.className = "barcol";
+    col.setAttribute("data-tip",
+      "h" + h.hour + " · grid " + h.grid_kwh.toFixed(1) + " · solar " + h.solar_used_kwh.toFixed(1) +
+      " · " + h.battery_action + " " + h.battery_kwh.toFixed(1));
+    var g = document.createElement("div");
+    g.className = "grid-bar";
+    g.style.height = (h.grid_kwh / maxKwh * 100).toFixed(2) + "%";
+    col.appendChild(g);
+    if (h.solar_used_kwh > 0) {
+      var s = document.createElement("div");
+      s.className = "solar-bar";
+      s.style.height = (h.solar_used_kwh / maxKwh * 100).toFixed(2) + "%";
+      col.appendChild(s);
+    }
+    bars.appendChild(col);
+
+    var lbl = document.createElement("span");
+    lbl.textContent = h.hour;
+    axis.appendChild(lbl);
+  });
+}
+</script>
+</body>
+</html>

@@ -9,6 +9,7 @@ returns a provably valid, minimum-cost 24-hour energy schedule.
 
 | Endpoint              | Purpose                                           | Success |
 |-----------------------|---------------------------------------------------|---------|
+| `GET /`               | Demo playground UI (self-contained `index.html`)  | `200` HTML |
 | `GET /health`         | Readiness probe for the judging harness           | `200 {"status":"ok"}` |
 | `POST /optimize-energy` | Interpret operator notes + return a 24-hour plan | `200` with the response schema below |
 

@@ -12,10 +12,11 @@ Error mapping (Section 6.1):
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from .pipeline import OptimizationFailedError, run_pipeline
 from .schemas import OptimizeRequest, OptimizeResponse
@@ -34,6 +35,12 @@ app = FastAPI(
     ),
     version="1.0.0",
 )
+
+
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    """Serve the demo playground (index.html) from the repository root."""
+    return FileResponse(Path(__file__).resolve().parents[1] / "index.html")
 
 
 @app.get("/health")
